@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Pill } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext'; // Corrected the import path case
+import { useAuth } from '../../Context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-// This layout no longer needs the navigate prop
 const AuthPageLayout = ({ children, title, subtitle, page, linkText }) => {
-    const navigate = useNavigate(); // Use the hook inside the component that needs it
+    const navigate = useNavigate();
     return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
             <motion.div
@@ -36,22 +35,24 @@ const AuthPageLayout = ({ children, title, subtitle, page, linkText }) => {
     );
 }
 
-
-const LoginPage = () => { // Removed navigate from props
-    const [email, setEmail] = useState('user@medwell.com');
-    const [password, setPassword] = useState('password123');
+const LoginPage = () => {
+    // Removed default values, useState is now empty string
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { login } = useAuth();
-    const navigate = useNavigate(); // Initialize hook
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        // NOTE: In a real app, you would get a user object from the login API call
+        // that contains their actual schedules. The empty dashboard is handled by the mock API for now.
         const success = await login(email, password);
         if (!success) {
             setError('Invalid email or password. Please try again.');
         } else {
-            navigate('/dashboard'); // Use URL path
+            navigate('/dashboard');
         }
     };
     
@@ -61,14 +62,15 @@ const LoginPage = () => { // Removed navigate from props
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <div>
                     <label className="text-sm font-bold text-gray-300 block mb-2">Email</label>
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    {/* Added placeholder */}
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 </div>
                 <div>
                     <label className="text-sm font-bold text-gray-300 block mb-2">Password</label>
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    {/* Added placeholder */}
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 </div>
                 <div className="text-right">
-                    {/* Use navigate hook for forgot password link */}
                     <a href="#" onClick={e => {e.preventDefault(); navigate('/forgot-password')}} className="text-sm text-purple-400 hover:underline">Forgot Password?</a>
                 </div>
                 <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-opacity">
@@ -80,4 +82,3 @@ const LoginPage = () => { // Removed navigate from props
 };
 
 export default LoginPage;
-
