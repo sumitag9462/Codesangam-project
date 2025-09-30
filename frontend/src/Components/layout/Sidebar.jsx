@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Calendar, Settings, BarChart2, ChevronLeft, ChevronRight, Pill, History as HistoryIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
-const Sidebar = ({ navigate, currentPage, isSidebarOpen, setSidebarOpen }) => {
+const Sidebar = ({ currentPage, isSidebarOpen, setSidebarOpen }) => { // Removed navigate from props
+    const navigate = useNavigate(); // Initialize hook
+
     const navItems = [
         { name: 'Dashboard', icon: <Home size={20} />, page: 'dashboard' },
         { name: 'Schedules', icon: <Calendar size={20} />, page: 'schedules' },
@@ -25,7 +28,7 @@ const Sidebar = ({ navigate, currentPage, isSidebarOpen, setSidebarOpen }) => {
             <div className="flex items-center justify-between p-4 h-16 border-b border-gray-700">
                 <AnimatePresence>
                     {isSidebarOpen && (
-                         <motion.div 
+                        <motion.div 
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
@@ -42,7 +45,8 @@ const Sidebar = ({ navigate, currentPage, isSidebarOpen, setSidebarOpen }) => {
                     <a
                         key={item.name}
                         href="#"
-                        onClick={(e) => { e.preventDefault(); navigate(item.page); }}
+                        // Updated onClick to use navigate with a URL path
+                        onClick={(e) => { e.preventDefault(); navigate(`/${item.page}`); }}
                         className={`flex items-center p-3 rounded-lg transition-colors duration-200 ${
                             currentPage === item.page ? 'bg-purple-600 text-white' : 'hover:bg-gray-700 hover:text-white'
                         }`}
@@ -75,4 +79,3 @@ const Sidebar = ({ navigate, currentPage, isSidebarOpen, setSidebarOpen }) => {
 };
 
 export default Sidebar;
-

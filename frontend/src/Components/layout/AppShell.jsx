@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import Sidebar from './Sidebar';
-import Topbar from './Topbar';
+import Sidebar from './Sidebar.jsx'; // Corrected import path
+import Topbar from './Topbar.jsx';   // Corrected import path
 
-const AppShell = ({ user, onLogout, navigate, currentPage, children }) => {
+// The navigate prop is no longer needed here as Sidebar will handle its own navigation
+const AppShell = ({ user, onLogout, currentPage, children }) => {
     const [isSidebarOpen, setSidebarOpen] = useState(true);
     
     return (
         <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
-            <Sidebar navigate={navigate} currentPage={currentPage} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
+            <Sidebar currentPage={currentPage} isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Topbar user={user} onLogout={onLogout} />
                 <main className="flex-1 overflow-y-auto p-6 bg-black/10">
