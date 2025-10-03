@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronsRight, Send } from 'lucide-react';
+import { X, MessageSquare, Send } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
-console.log('API Key Loaded:', import.meta.env.VITE_GEMINI_API_KEY);
 
 // Get the API key from environment variables
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -11,11 +9,8 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 // Initialize the GoogleGenerativeAI with the API key
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-// =================================================================
-// === THE FINAL FIX IS HERE ===
-// We are updating the model name to a newer, recommended version.
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-// =================================================================
+// Use the latest recommended model for best performance
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
 
 const Chatbot = () => {
@@ -41,7 +36,6 @@ const Chatbot = () => {
         const currentInput = input;
         
         setIsLoading(true);
-        // Add user message to the UI state immediately
         setMessages(prev => [...prev, userMessage]);
         setInput('');
 
@@ -51,14 +45,13 @@ const Chatbot = () => {
             const historyForApi = messages.slice(1); 
 
             const chat = model.startChat({
-                history: historyForApi, // Use the corrected history
+                history: historyForApi,
             });
 
             const result = await chat.sendMessage(currentInput);
             const response = result.response;
             const modelMessage = { role: 'model', parts: [{ text: response.text() }] };
 
-            // Add the model's response to the chat history
             setMessages(prevHistory => [...prevHistory, modelMessage]);
         } catch (error) {
             console.error("Error sending message:", error);
@@ -78,7 +71,7 @@ const Chatbot = () => {
 
     return (
         <>
-            <div className="fixed bottom-6 right-6 z-50">
+            <div className="fixed bottom-6 right-6 z-50 group">
                 <motion.button
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -86,10 +79,16 @@ const Chatbot = () => {
                     className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full p-4 shadow-lg"
                 >
                     <AnimatePresence>
-                        {isOpen ? <X size={24} /> : <ChevronsRight size={24} />}
+                        {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
                     </AnimatePresence>
                 </motion.button>
+                {!isOpen && (
+                    <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        AI Assistant
+                    </div>
+                )}
             </div>
+            
             <AnimatePresence>
             {isOpen && (
                 <motion.div

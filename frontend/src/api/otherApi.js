@@ -1,25 +1,58 @@
+import { db } from './mockDb';
+
+const simulateApiCall = (data, delay = 400) => new Promise(resolve => setTimeout(() => resolve(data), delay));
+
 export const otherApi = {
-    getAnalyticsData: async () => ({
-        adherence: [
-            { name: 'Mon', adherence: 90 }, { name: 'Tue', adherence: 80 }, { name: 'Wed', adherence: 85 },
-            { name: 'Thu', adherence: 95 }, { name: 'Fri', adherence: 100 }, { name: 'Sat', adherence: 70 },
-            { name: 'Sun', adherence: 92 },
-        ],
-        missedByHour: [
-            { hour: 'Morning (6-11am)', missed: 3 }, { hour: 'Afternoon (12-5pm)', missed: 1 },
-            { hour: 'Evening (6-11pm)', missed: 5 }, { hour: 'Night (12-5am)', missed: 0 },
-        ],
-        streak: 14,
-    }),
-    askChatbot: async (message) => {
-        const lowerMessage = message.toLowerCase();
-        if (lowerMessage.includes("next dose")) {
-            return "Your next dose is Metformin (500mg) at 8:00 PM tonight.";
-        } else if (lowerMessage.includes("missed any")) {
-            return "You missed one dose of Lisinopril yesterday morning.";
-        } else if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
-            return "Hello! I'm your wellness assistant. How can I help you today?";
+    // This function performs all calculations for the dashboard
+    getDashboardSummary: () => {
+        const schedules = db.getSchedules().filter(s => s.isActive);
+        const doseLogs = db.getDoseLogs();
+        const today = new Date();
+
+        // Upcoming Doses for today
+        const now = today.getHours() * 60 + today.getMinutes();
+        const upcomingDoses = schedules.flatMap(s =>
+            s.times.map(time => {
+                const [hour, minute] = time.split(':');
+                const doseTimeInMinutes = parseInt(hour) * 60 + parseInt(minute);
+                if (doseTimeInMinutes >= now) {
+                    return { scheduleId: s.id, medicationName: `${s.name} ${s.dosage}`, time };
+                }
+                return null;
+            }).filter(Boolean)
+        ).sort((a, b) => a.time.localeCompare(b.time));
+
+        // Recent Activity (last 5 logs)
+        const recentActivity = doseLogs.slice(0, 5);
+
+        // Adherence for last 7 days
+        const weekLogs = doseLogs.filter(log => new Date(log.actionTime) > new Date(new Date().setDate(today.getDate() - 7)));
+        const adherenceWeekly = weekLogs.length > 0 ? Math.round(weekLogs.filter(l => l.status === 'Taken').length / weekLogs.length * 100) : 0;
+
+        // Current Streak
+        let currentStreak = 0;
+        for (let i = 0; i < 30; i++) {
+            const date = new Date();
+            date.setDate(today.getDate() - (i + 1)); // Start from yesterday and go back
+            const schedulesForDay = schedules.filter(s => new Date(s.startDate) <= date && s.isActive);
+            if (schedulesForDay.length === 0 && i === 0) continue; // No meds yesterday
+
+            const totalDosesScheduled = schedulesForDay.reduce((acc, s) => acc + s.times.length, 0);
+            const logsForDay = doseLogs.filter(log => new Date(log.actionTime).toDateString() === date.toDateString());
+            const takenLogsForDay = logsForDay.filter(l => l.status === 'Taken');
+            
+            if (takenLogsForDay.length >= totalDosesScheduled && totalDosesScheduled > 0) {
+                currentStreak++;
+            } else {
+                break; // Streak is broken
+            }
         }
-        return "I'm not sure how to answer that. You can ask me about your next dose or if you've missed any medications.";
+
+        const summary = {
+            kpis: { adherenceWeekly, currentStreak, upcomingToday: upcomingDoses.length },
+            upcomingDoses,
+            recentActivity,
+        };
+        return simulateApiCall(summary);
     },
 };

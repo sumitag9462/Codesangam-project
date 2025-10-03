@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pill } from 'lucide-react';
-import { useAuth } from '../../Context/AuthContext';
+import { Pill, Eye, EyeOff } from 'lucide-react'; // Import Eye icons
+import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const AuthPageLayout = ({ children, title, subtitle, page, linkText }) => {
@@ -36,9 +36,9 @@ const AuthPageLayout = ({ children, title, subtitle, page, linkText }) => {
 }
 
 const LoginPage = () => {
-    // Removed default values, useState is now empty string
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false); // State for password visibility
     const [error, setError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -46,8 +46,6 @@ const LoginPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        // NOTE: In a real app, you would get a user object from the login API call
-        // that contains their actual schedules. The empty dashboard is handled by the mock API for now.
         const success = await login(email, password);
         if (!success) {
             setError('Invalid email or password. Please try again.');
@@ -62,13 +60,26 @@ const LoginPage = () => {
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <div>
                     <label className="text-sm font-bold text-gray-300 block mb-2">Email</label>
-                    {/* Added placeholder */}
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 </div>
                 <div>
                     <label className="text-sm font-bold text-gray-300 block mb-2">Password</label>
-                    {/* Added placeholder */}
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    <div className="relative">
+                        <input 
+                            type={showPassword ? 'text' : 'password'} // Toggle input type
+                            value={password} 
+                            onChange={e => setPassword(e.target.value)} 
+                            placeholder="Enter your password" 
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                        />
+                        <button 
+                            type="button" 
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white"
+                        >
+                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                    </div>
                 </div>
                 <div className="text-right">
                     <a href="#" onClick={e => {e.preventDefault(); navigate('/forgot-password')}} className="text-sm text-purple-400 hover:underline">Forgot Password?</a>
