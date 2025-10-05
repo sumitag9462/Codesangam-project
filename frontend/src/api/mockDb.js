@@ -26,7 +26,8 @@ export const db = {
             id: `sched_${Date.now()}`,
             ...formData,
             isActive: true,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            googleEventIds: [] // Initialize with empty array
         };
         saveSchedules([...schedules, newSchedule]);
         return newSchedule;
@@ -34,8 +35,19 @@ export const db = {
 
     updateSchedule: (scheduleId, updatedData) => {
         let schedules = getSchedules();
-        schedules = schedules.map(s => (s.id === scheduleId ? { ...s, ...updatedData, id: s.id } : s));
+        let updatedSchedule = null;
+        schedules = schedules.map(s => {
+            if (s.id === scheduleId) {
+                // Create the updated object
+                updatedSchedule = { ...s, ...updatedData, id: s.id };
+                return updatedSchedule;
+            }
+            return s;
+        });
         saveSchedules(schedules);
+        // --- THE FIX ---
+        // This function now returns the updated schedule object
+        return updatedSchedule;
     },
 
     deleteSchedule: (scheduleId) => {

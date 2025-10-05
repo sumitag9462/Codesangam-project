@@ -4,44 +4,67 @@ import { History as HistoryIcon, CheckCircle, XCircle } from 'lucide-react';
 import { dateUtils } from '../utils/dateUtils';
 
 const HistoryPage = () => {
-    const [logs, setLogs] = useState([]);
+    const [logs, setLogs] = useState({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         medicineApi.getDoseLogs().then(data => {
-            setLogs(data);
+            const grouped = data.reduce((acc, log) => {
+                const date = new Date(log.actionTime).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                if (!acc[date]) {
+                    acc[date] = [];
+                }
+                acc[date].push(log);
+                return acc;
+            }, {});
+            setLogs(grouped);
+            setLoading(false);
+        }).catch(error => {
+            console.error("Failed to fetch history:", error);
             setLoading(false);
         });
     }, []);
 
     if (loading) return <div className="text-center p-10">Loading History...</div>;
 
+    const logGroups = Object.keys(logs);
+
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-white">Dose History</h1>
-                {/* Future: Add filter controls here */}
             </div>
             
-            {logs.length > 0 ? (
-                <div className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700">
-                    <div className="divide-y divide-gray-700">
-                        {logs.map(log => (
-                            <div key={log.logId} className="flex items-center justify-between p-4 hover:bg-gray-700/50">
-                                 <div className="flex items-center gap-4">
-                                    {log.status === 'Taken' ? <CheckCircle size={24} className="text-green-400"/> : <XCircle size={24} className="text-red-400"/>}
-                                    <div>
-                                        <p className="font-semibold text-white">{log.medicationName}</p>
-                                        <p className="text-sm text-gray-400">Scheduled for {dateUtils.formatTime(new Date(log.scheduledTime).toTimeString().slice(0,5))}</p>
-                                    </div>
-                                 </div>
-                                 <div className="text-right">
-                                    <p className={`font-semibold text-sm ${log.status === 'Taken' ? 'text-green-300' : 'text-red-300'}`}>{log.status}</p>
-                                    <p className="text-xs text-gray-500">{new Date(log.actionTime).toLocaleString()}</p>
-                                 </div>
+            {logGroups.length > 0 ? (
+                <div className="space-y-8">
+                    {logGroups.map(date => (
+                        <div key={date}>
+                             <h2 className="text-xl font-semibold text-purple-300 mb-4 sticky top-0 bg-gray-900/80 backdrop-blur-sm py-2 z-10">{date}</h2>
+                             <div className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700">
+                                <div className="divide-y divide-gray-700">
+                                    {logs[date].map(log => (
+                                        <div key={log.logId} className="flex items-center justify-between p-4 hover:bg-gray-700/50">
+                                            <div className="flex items-center gap-4">
+                                                {log.status === 'Taken' ? <CheckCircle size={24} className="text-green-400"/> : <XCircle size={24} className="text-red-400"/>}
+                                                <div>
+                                                    <p className="font-semibold text-white">{log.medicationName}</p>
+                                                    <p className="text-sm text-gray-400">Scheduled for {dateUtils.formatTime(new Date(log.scheduledTime).toTimeString().slice(0,5))}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`font-semibold text-sm ${log.status === 'Taken' ? 'text-green-300' : 'text-red-300'}`}>{log.status}</p>
+                                                <p className="text-xs text-gray-500">{new Date(log.actionTime).toLocaleTimeString()}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
                 </div>
             ) : (
                 <div className="text-center bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-2xl p-12">
@@ -54,3 +77,4 @@ const HistoryPage = () => {
     );
 };
 export default HistoryPage;
+

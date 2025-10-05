@@ -1,28 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import StatCard from '../Components/cards/StatCard';
-import { Clock, BarChart2, Zap, Plus, Check, X } from 'lucide-react';
+import { Clock, BarChart2, Zap, Plus, Check, X, AlertTriangle } from 'lucide-react';
 import { dateUtils } from '../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { otherApi } from '../api/otherApi';
 import { medicineApi } from '../api/medicineApi';
+import { predictionService } from '../services/predictionService';
+import { notificationService } from '../services/notificationService';
 
 const DashboardPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [prediction, setPrediction] = useState(null);
 
-    const fetchData = () => {
+    const fetchData = useCallback(() => {
         setLoading(true);
-        otherApi.getDashboardSummary().then(data => {
-            setSummary(data);
+        Promise.all([
+            otherApi.getDashboardSummary(),
+            medicineApi.getDoseLogs()
+        ]).then(([summaryData, doseLogs]) => {
+            setSummary(summaryData);
+            const adherencePrediction = predictionService.predictAdherence(doseLogs);
+            setPrediction(adherencePrediction);
+
+            summaryData.upcomingDoses.forEach(dose => {
+                notificationService.scheduleNotification(dose);
+            });
+
+            setLoading(false);
+        }).catch(error => {
+            console.error("Failed to fetch dashboard data:", error);
             setLoading(false);
         });
-    };
+    }, []);
 
-    // Fetch data when the component loads
-    useEffect(fetchData, []);
+    useEffect(() => {
+        fetchData();
+        notificationService.requestPermission();
+    }, [fetchData]);
 
     const handleLogDose = (dose, status) => {
         const log = {
@@ -33,7 +51,7 @@ const DashboardPage = () => {
             status,
         };
         medicineApi.createDoseLog(log).then(() => {
-            fetchData(); // Re-fetch all data to update the dashboard
+            fetchData();
         });
     };
 
@@ -43,6 +61,13 @@ const DashboardPage = () => {
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-white">Welcome back, {user?.name.split(' ')[0]}!</h1>
             
+            {prediction && (
+                <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-300 px-4 py-3 rounded-lg relative flex items-center" role="alert">
+                    <AlertTriangle className="mr-3"/>
+                    <span className="block sm:inline">{prediction}</span>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard title="Upcoming Doses Today" value={summary.kpis.upcomingToday} icon={<Clock size={24}/>} color="bg-blue-500/20 text-blue-300" />
                 <StatCard title="Adherence (7d)" value={`${summary.kpis.adherenceWeekly}%`} icon={<BarChart2 size={24}/>} color="bg-green-500/20 text-green-300" />
@@ -62,7 +87,7 @@ const DashboardPage = () => {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <p className="font-bold text-lg text-purple-400 mr-4">{dateUtils.formatTime(dose.time)}</p>
-                                        <button onClick={() => handleLogDose(dose, 'Skipped')} title="Skip Dose" className="p-2 bg-yellow-500/20 text-yellow-300 rounded-full hover:bg-yellow-500/40 transition-colors"><X size={16}/></button>
+                                        <button onClick={() => handleLogDose(dose, 'Skipped')} title="Skip Dose" className="p-2 bg-red-500/20 text-red-300 rounded-full hover:bg-red-500/40 transition-colors"><X size={16}/></button>
                                         <button onClick={() => handleLogDose(dose, 'Taken')} title="Take Dose" className="p-2 bg-green-500/20 text-green-300 rounded-full hover:bg-green-500/40 transition-colors"><Check size={16}/></button>
                                     </div>
                                 </div>
@@ -94,8 +119,8 @@ const DashboardPage = () => {
                         </ul>
                     ) : (
                         <div className="text-center py-8 text-gray-400">
-                             <p>No recent activity to show.</p>
-                             <p className="text-sm mt-2">Doses you take or miss will appear here.</p>
+                           <p>No recent activity to show.</p>
+                           <p className="text-sm mt-2">Doses you take or miss will appear here.</p>
                         </div>
                     )}
                 </div>
@@ -104,3 +129,4 @@ const DashboardPage = () => {
     );
 };
 export default DashboardPage;
+

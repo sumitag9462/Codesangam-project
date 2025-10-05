@@ -1,43 +1,108 @@
-import React from 'react';
-import { useAuth } from '../Context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
+import { googleCalendarApi } from '../services/googleCalendarApi.js';
+import { notificationService } from '../services/notificationService.js';
+import { motion } from 'framer-motion';
 
 const SettingsPage = () => {
     const { user } = useAuth();
-    
+    const [isCalendarEnabled, setIsCalendarEnabled] = useState(false);
+    const [apiReady, setApiReady] = useState(false);
+    const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+
+    useEffect(() => {
+        googleCalendarApi.loadGapiScripts()
+            .then(() => {
+                setApiReady(true);
+                setIsCalendarEnabled(googleCalendarApi.isCalendarEnabled());
+            })
+            .catch(error => {
+                console.error("Final catch in Settings page:", error);
+                // Optionally, you can set a state here to show a permanent error message on the UI
+            });
+    }, []);
+
+    const handleCalendarSignIn = () => {
+        googleCalendarApi.handleAuthClick().then(() => {
+            setIsCalendarEnabled(true);
+        }).catch(err => {
+            console.error("Calendar sign-in error", err);
+            alert("Could not sign in to Google Calendar. Make sure pop-ups are not blocked and try again.");
+        });
+    };
+
+    const handleCalendarSignOut = () => {
+        googleCalendarApi.handleSignoutClick();
+        setIsCalendarEnabled(false);
+    };
+
+    const handleNotificationRequest = () => {
+        notificationService.requestPermission().then(permission => {
+            setNotificationPermission(permission);
+        });
+    };
+
     return (
-    <div>
-        <h1 className="text-3xl font-bold text-white mb-6">Settings</h1>
+        <div>
+            <h1 className="text-3xl font-bold text-white mb-6">Settings</h1>
+            <div className="space-y-8 max-w-3xl mx-auto">
+                {/* Profile Information Card */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 p-8"
+                >
+                    <h2 className="text-xl font-bold text-white mb-6">Profile Information</h2>
+                    <form className="space-y-4">
+                        <div>
+                            <label className="text-sm font-bold text-gray-300 block mb-2">Full Name</label>
+                            <input type="text" defaultValue={user?.name} className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-gray-300 block mb-2">Email</label>
+                            <input type="email" defaultValue={user?.email} disabled className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-gray-400 cursor-not-allowed" />
+                        </div>
+                        <div className="pt-6 flex justify-end">
+                            <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
 
-        <div className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 p-8 max-w-2xl mx-auto">
-            <h2 className="text-xl font-bold text-white mb-6">Profile Information</h2>
-            <form className="space-y-4">
-                 <div>
-                    <label className="text-sm font-bold text-gray-300 block mb-2">Full Name</label>
-                    <input type="text" defaultValue={user?.name} className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                </div>
-                 <div>
-                    <label className="text-sm font-bold text-gray-300 block mb-2">Email</label>
-                    <input type="email" defaultValue={user?.email} className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                </div>
-                
-                 <h2 className="text-xl font-bold text-white pt-6 mb-2">Notification Settings</h2>
-                 <div className="flex items-center space-x-4">
-                    <label className="text-gray-300">Notification Type:</label>
-                    <select className="bg-gray-700 border border-gray-600 rounded-lg p-2 text-white">
-                        <option>Push Notifications</option>
-                        <option>Email</option>
-                        <option>Both</option>
-                    </select>
-                </div>
-
-                <div className="pt-6 flex justify-end">
-                    <button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg">
-                        Save Changes
-                    </button>
-                </div>
-            </form>
+                {/* Integrations Card */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 p-8">
+                    <h2 className="text-xl font-bold text-white mb-6">Integrations & Notifications</h2>
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold text-white">Google Calendar Sync</h3>
+                                <p className="text-sm text-gray-400">Automatically sync your medication schedules.</p>
+                            </div>
+                            {isCalendarEnabled ? (
+                                <button onClick={handleCalendarSignOut} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">
+                                    Disconnect
+                                </button>
+                            ) : (
+                                <button onClick={handleCalendarSignIn} disabled={!apiReady} className={`font-bold py-2 px-4 rounded-lg ${!apiReady ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                                    {apiReady ? 'Connect' : 'Loading...'}
+                                </button>
+                            )}
+                        </div>
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="font-bold text-white">Browser Notifications</h3>
+                                <p className="text-sm text-gray-400">Status: <span className="font-semibold capitalize">{notificationPermission}</span></p>
+                            </div>
+                            {notificationPermission !== 'granted' && (
+                                <button onClick={handleNotificationRequest} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">
+                                    Request Permission
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
         </div>
-    </div>
     )
 };
 
