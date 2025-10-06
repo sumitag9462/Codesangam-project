@@ -5,9 +5,8 @@ import { dateUtils } from '../utils/dateUtils';
 import { Plus, Pill, Edit, Trash2 } from 'lucide-react';
 import { googleCalendarApi } from '../services/googleCalendarApi';
 
-// The ScheduleForm component remains the same as the previous version.
 const ScheduleForm = ({ onSave, onCancel, existingSchedule }) => {
-    // ... (no changes needed in this component)
+    // ... (This component does not need any changes)
     const [formData, setFormData] = useState({
         name: '',
         dosage: '',
@@ -113,7 +112,6 @@ const SchedulesPage = () => {
     const handleSave = async (formData) => {
         setIsModalOpen(false);
         
-        // If we are editing, first delete the old calendar events
         if (editingSchedule && editingSchedule.googleEventIds) {
             await googleCalendarApi.deleteScheduleFromCalendar(editingSchedule.googleEventIds);
         }
@@ -123,15 +121,14 @@ const SchedulesPage = () => {
             : formData;
             
         const savedSchedule = editingSchedule
-            ? await medicineApi.updateSchedule(editingSchedule.id, scheduleData)
+            ? await medicineApi.updateSchedule(editingSchedule._id, scheduleData) // FIX: Use ._id here
             : await medicineApi.addSchedule(scheduleData);
         
-        // Add new events to calendar and get their IDs
         const newEventIds = await googleCalendarApi.addScheduleToCalendar(savedSchedule);
 
-        // Save the new event IDs back to our database
         if (newEventIds && newEventIds.length > 0) {
-            await medicineApi.updateSchedule(savedSchedule.id, { ...savedSchedule, googleEventIds: newEventIds });
+            // FIX: Use savedSchedule._id here for newly created schedules
+            await medicineApi.updateSchedule(savedSchedule._id, { ...savedSchedule, googleEventIds: newEventIds });
         }
         
         setEditingSchedule(null);
@@ -140,14 +137,12 @@ const SchedulesPage = () => {
 
     const confirmDelete = async () => {
         if (showDeleteConfirm) {
-            const scheduleToDelete = schedules.find(s => s.id === showDeleteConfirm);
+            const scheduleToDelete = schedules.find(s => s._id === showDeleteConfirm);
             
-            // Delete from Google Calendar first
             if (scheduleToDelete && scheduleToDelete.googleEventIds) {
                 await googleCalendarApi.deleteScheduleFromCalendar(scheduleToDelete.googleEventIds);
             }
             
-            // Then delete from our database
             await medicineApi.deleteSchedule(showDeleteConfirm);
 
             setShowDeleteConfirm(null);
@@ -155,7 +150,6 @@ const SchedulesPage = () => {
         }
     };
 
-    // Other handlers (handleDelete, handleOpenEditModal, etc.) remain the same
     const handleDelete = (scheduleId) => setShowDeleteConfirm(scheduleId);
     const handleOpenEditModal = (schedule) => { setEditingSchedule(schedule); setIsModalOpen(true); };
     const handleOpenNewModal = () => { setEditingSchedule(null); setIsModalOpen(true); };
@@ -163,7 +157,6 @@ const SchedulesPage = () => {
 
     return (
         <div>
-            {/* The JSX for the page layout remains the same */}
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-white">My Medication Schedules</h1>
                 <button onClick={handleOpenNewModal} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg flex items-center">
@@ -174,7 +167,7 @@ const SchedulesPage = () => {
             {loading ? <div className="text-center p-10">Loading Schedules...</div> : schedules.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {schedules.map(schedule => (
-                        <motion.div key={schedule.id} layout className="bg-gray-800 p-6 rounded-2xl flex flex-col justify-between border border-gray-700 hover:border-purple-500 transition-colors">
+                        <motion.div key={schedule._id} layout className="bg-gray-800 p-6 rounded-2xl flex flex-col justify-between border border-gray-700 hover:border-purple-500 transition-colors">
                             <div>
                                 <h2 className="text-xl font-bold text-white mb-2">{schedule.name}</h2>
                                 <p className="text-purple-300 font-semibold">{schedule.dosage}</p>
@@ -188,7 +181,8 @@ const SchedulesPage = () => {
                                 <p className="text-gray-500">Start: {dateUtils.formatDate(schedule.startDate)}</p>
                                 <div className="flex gap-4">
                                     <button onClick={() => handleOpenEditModal(schedule)} className="flex items-center gap-1 text-blue-400 hover:text-blue-300"><Edit size={14}/> Edit</button>
-                                    <button onClick={() => handleDelete(schedule.id)} className="flex items-center gap-1 text-red-400 hover:text-red-300"><Trash2 size={14}/> Delete</button>
+                                    {/* FIX: Use schedule._id */}
+                                    <button onClick={() => handleDelete(schedule._id)} className="flex items-center gap-1 text-red-400 hover:text-red-300"><Trash2 size={14}/> Delete</button>
                                 </div>
                             </div>
                         </motion.div>
@@ -219,15 +213,15 @@ const SchedulesPage = () => {
             <AnimatePresence>
                 {showDeleteConfirm && (
                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-                        <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="bg-gray-800 rounded-2xl p-8 w-full max-w-sm border border-gray-700 text-center">
-                            <h3 className="text-lg font-bold text-white">Are you sure?</h3>
-                            <p className="text-gray-400 my-4">This action will permanently delete the schedule. This cannot be undone.</p>
-                            <div className="flex justify-center gap-4">
-                                <button onClick={() => setShowDeleteConfirm(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
-                                <button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Delete</button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
+                         <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="bg-gray-800 rounded-2xl p-8 w-full max-w-sm border border-gray-700 text-center">
+                             <h3 className="text-lg font-bold text-white">Are you sure?</h3>
+                             <p className="text-gray-400 my-4">This action will permanently delete the schedule. This cannot be undone.</p>
+                             <div className="flex justify-center gap-4">
+                                 <button onClick={() => setShowDeleteConfirm(null)} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Cancel</button>
+                                 <button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Delete</button>
+                             </div>
+                         </motion.div>
+                     </motion.div>
                 )}
             </AnimatePresence>
         </div>

@@ -108,7 +108,9 @@ const DashboardPage = () => {
                     {summary.recentActivity.length > 0 ? (
                          <ul className="space-y-3">
                             {summary.recentActivity.map(log => (
-                                <li key={log.logId} className="flex items-center justify-between text-sm">
+                                // --- THIS IS THE FIX ---
+                                // We add a unique key prop using the ID from the database
+                                <li key={log._id} className="flex items-center justify-between text-sm">
                                     <div className="flex items-center">
                                         {log.status === 'Taken' ? <Check size={16} className="mr-3 text-green-400"/> : <X size={16} className="mr-3 text-red-400"/>}
                                         <span className="font-medium text-white">{log.medicationName}</span>
@@ -129,4 +131,3 @@ const DashboardPage = () => {
     );
 };
 export default DashboardPage;
-

@@ -6,21 +6,22 @@ import { motion } from 'framer-motion';
 
 const SettingsPage = () => {
     const { user } = useAuth();
-    const [isCalendarEnabled, setIsCalendarEnabled] = useState(false);
-    const [apiReady, setApiReady] = useState(false);
+    // We remove the apiReady state and just check if the calendar is enabled.
+    const [isCalendarEnabled, setIsCalendarEnabled] = useState(googleCalendarApi.isCalendarEnabled());
     const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
-
+    
+    // This effect will re-check the calendar status if it changes.
     useEffect(() => {
-        googleCalendarApi.loadGapiScripts()
-            .then(() => {
-                setApiReady(true);
-                setIsCalendarEnabled(googleCalendarApi.isCalendarEnabled());
-            })
-            .catch(error => {
-                console.error("Final catch in Settings page:", error);
-                // Optionally, you can set a state here to show a permanent error message on the UI
-            });
-    }, []);
+        const interval = setInterval(() => {
+            const isEnabled = googleCalendarApi.isCalendarEnabled();
+            if (isEnabled !== isCalendarEnabled) {
+                setIsCalendarEnabled(isEnabled);
+            }
+        }, 1000); // Check every second
+
+        return () => clearInterval(interval);
+    }, [isCalendarEnabled]);
+
 
     const handleCalendarSignIn = () => {
         googleCalendarApi.handleAuthClick().then(() => {
@@ -46,7 +47,6 @@ const SettingsPage = () => {
         <div>
             <h1 className="text-3xl font-bold text-white mb-6">Settings</h1>
             <div className="space-y-8 max-w-3xl mx-auto">
-                {/* Profile Information Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                     className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 p-8"
@@ -69,7 +69,6 @@ const SettingsPage = () => {
                     </form>
                 </motion.div>
 
-                {/* Integrations Card */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-gray-800 rounded-2xl shadow-lg border border-gray-700 p-8">
                     <h2 className="text-xl font-bold text-white mb-6">Integrations & Notifications</h2>
                     <div className="space-y-6">
@@ -83,8 +82,8 @@ const SettingsPage = () => {
                                     Disconnect
                                 </button>
                             ) : (
-                                <button onClick={handleCalendarSignIn} disabled={!apiReady} className={`font-bold py-2 px-4 rounded-lg ${!apiReady ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                                    {apiReady ? 'Connect' : 'Loading...'}
+                                <button onClick={handleCalendarSignIn} className="font-bold py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-700">
+                                    Connect
                                 </button>
                             )}
                         </div>

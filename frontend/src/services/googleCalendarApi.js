@@ -84,10 +84,13 @@ export const googleCalendarApi = {
 
         const createdEventIds = [];
         for (const time of schedule.times) {
-            // --- FIX: Simplified and more reliable date/time creation ---
-            const eventDateTime = new Date(`${schedule.startDate}T${time}`);
+            
+            // --- THIS IS THE FIX ---
+            // The startDate from the database is a full ISO string (e.g., "2025-10-06T00:00:00.000Z").
+            // We only want the date part "2025-10-06" to create a valid new date with the scheduled time.
+            const datePart = schedule.startDate.split('T')[0];
+            const eventDateTime = new Date(`${datePart}T${time}`);
 
-            // Skip if the date is somehow invalid
             if (isNaN(eventDateTime.getTime())) {
                 console.error(`Could not create a valid date from start: ${schedule.startDate} and time: ${time}`);
                 continue; 
